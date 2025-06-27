@@ -1,38 +1,36 @@
 import streamlit as st
 import pandas as pd
 import joblib
-from sklearn.preprocessing import LabelEncoder
 
 # Load model and features
 model = joblib.load("mushroom_model.pkl")
 features = joblib.load("mushroom_features.pkl")
 
-# Define categorical options for selected features
-feature_options = {
-    "odor": ['almond', 'anise', 'creosote', 'fishy', 'foul', 'musty', 'none', 'pungent', 'spicy'],
-    "gill-color": ['black', 'brown', 'buff', 'chocolate', 'gray', 'green', 'orange', 'pink', 'purple', 'red', 'white', 'yellow'],
-    "spore-print-color": ['black', 'brown', 'buff', 'chocolate', 'green', 'orange', 'purple', 'white', 'yellow'],
-    "habitat": ['grasses', 'leaves', 'meadows', 'paths', 'urban', 'waste', 'woods'],
-    "bruises": ['bruises', 'no'],
-    "gill-spacing": ['close', 'crowded']
+# Manual encoding (must match training time)
+encoding_maps = {
+    "odor": {'almond': 0, 'anise': 1, 'creosote': 2, 'fishy': 3, 'foul': 4, 'musty': 5, 'none': 6, 'pungent': 7, 'spicy': 8},
+    "gill-color": {'black': 0, 'brown': 1, 'buff': 2, 'chocolate': 3, 'gray': 4, 'green': 5, 'orange': 6, 'pink': 7, 'purple': 8, 'red': 9, 'white': 10, 'yellow': 11},
+    "spore-print-color": {'black': 0, 'brown': 1, 'buff': 2, 'chocolate': 3, 'green': 4, 'orange': 5, 'purple': 6, 'white': 7, 'yellow': 8},
+    "habitat": {'grasses': 0, 'leaves': 1, 'meadows': 2, 'paths': 3, 'urban': 4, 'waste': 5, 'woods': 6},
+    "bruises": {'bruises': 0, 'no': 1},
+    "gill-spacing": {'close': 0, 'crowded': 1}
 }
 
+# Define form inputs
 st.title("🍄 Mushroom Edibility Predictor")
 
-# Get user input
 user_input = {}
 for feature in features:
-    user_input[feature] = st.selectbox(f"{feature.replace('-', ' ').title()}", feature_options[feature])
+    options = list(encoding_maps[feature].keys())
+    user_input[feature] = st.selectbox(f"{feature.replace('-', ' ').title()}", options)
 
 if st.button("Predict"):
-    # Encode input using same encoding logic
-    df_input = pd.DataFrame([user_input])
-    df_encoded = df_input.apply(LabelEncoder().fit_transform)
+    # Manually encode inputs using the encoding map
+    encoded_input = {feature: encoding_maps[feature][user_input[feature]] for feature in features}
+    
+    df_encoded = pd.DataFrame([encoded_input])
 
-    # Align to model feature order
-    df_encoded = df_encoded.reindex(columns=features, fill_value=0)
-
-    # Predict
     prediction = model.predict(df_encoded)[0]
     result = "🍽️ Edible" if prediction == 0 else "☠️ Poisonous"
     st.success(f"The mushroom is predicted to be: **{result}**")
+
